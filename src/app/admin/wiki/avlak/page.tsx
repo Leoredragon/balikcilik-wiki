@@ -48,7 +48,7 @@ export default function AdminWikiAvlakPage() {
         <div className="flex items-center justify-between">
           <div>
             <Link href="/admin/wiki" className="text-sm text-blue-600 hover:underline">← Wiki</Link>
-            <h2 className="text-xl font-bold text-gray-900 mt-1">🗺️ Avlak Noktaları Yönetimi</h2>
+            <h2 className="text-xl font-bold text-gray-900 mt-1">Avlak Noktaları Yönetimi</h2>
           </div>
           <button onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow active:scale-95 transition-all">
@@ -109,16 +109,19 @@ export default function AdminWikiAvlakPage() {
         ) : (
           <div className="space-y-3">
             {articles.map(a => (
-              <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-start justify-between gap-3">
+                <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     {a.region && <span className="text-xs bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full">{a.region}</span>}
                   </div>
                   <p className="font-bold text-gray-900">{a.title}</p>
                   {a.subtitle && <p className="text-sm text-gray-500">{a.subtitle}</p>}
-                  {a.best_months && <p className="text-xs text-gray-400 mt-0.5">📅 {a.best_months}</p>}
+                  {a.best_months && <p className="text-xs text-gray-400 mt-0.5">{a.best_months}</p>}
                 </div>
-                <button onClick={() => handleDelete(a.id)} className="text-xs text-red-400 hover:text-red-600 font-bold whitespace-nowrap flex-shrink-0">Sil</button>
+                <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                  <Link href={`/admin/wiki/avlak/${a.id}`} className="text-xs text-blue-600 hover:text-blue-800 font-bold">Düzenle</Link>
+                  <button onClick={() => handleDelete(a.id)} className="text-xs text-red-400 hover:text-red-600 font-bold">Sil</button>
+                </div>
               </div>
             ))}
           </div>

@@ -1,31 +1,38 @@
 @import "tailwindcss";
 
-
 body {
   background-color: #f9fafb;
-  /* Açık gri profesyonel arka plan (gray-50) */
   color: #111827;
-  /* Koyu gri okunabilir metin rengi (gray-900) */
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 @layer base {
   body {
     @apply selection:bg-blue-100 selection:text-blue-900;
   }
+  .font-inter { font-family: var(--font-inter), system-ui, sans-serif; }
+  .font-playfair { font-family: var(--font-playfair), Georgia, serif; }
 }
 
-/* Kaydırma çubuğunu gizlemek için yardımcı sınıf */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* Scrollbar gizleme */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Kartların üzerine gelince yumuşak bir gölge ve yükselme efekti */
-.wiki-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Kart hover efekti */
+.wiki-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* Line clamp */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .wiki-card:hover {

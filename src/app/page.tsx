@@ -5,79 +5,205 @@ import SearchAutocomplete from '@/components/SearchAutocomplete';
 
 export const revalidate = 60;
 
+// Mevcut ay için aktif balıklar (mevsimsel verim)
+const CURRENT_MONTH = new Date().getMonth() + 1; // 1-12
+
+const SEASON_NAME = () => {
+  const m = CURRENT_MONTH;
+  if ([12, 1, 2].includes(m)) return 'Kış';
+  if ([3, 4, 5].includes(m)) return 'İlkbahar';
+  if ([6, 7, 8].includes(m)) return 'Yaz';
+  return 'Sonbahar';
+};
+
+const QUICK_LINKS = [
+  { label: 'Av Takvimi', href: '/takvim', desc: 'Aylık verim tablosu' },
+  { label: 'Avlak Noktaları', href: '/avlak', desc: 'Türkiye haritası' },
+  { label: 'Yasal Düzenlemeler', href: '/yasal', desc: 'Boy limitleri & yasaklar' },
+  { label: 'Hava Durumu', href: '/hava', desc: 'Anlık koşullar' },
+  { label: 'Yem Tarifleri', href: '/yem-tarifleri', desc: 'Doğal & yapay yemler' },
+  { label: 'Başlangıç Rehberi', href: '/baslangic', desc: 'İlk ava çıkmadan önce' },
+];
+
 export default async function Home() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // 1. Ana Kategorileri Çek (parent_id'si null olanlar)
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name_tr, slug, description')
-    .is('parent_id', null)
-    .order('name_tr');
+  // Mevsimsel öne çıkanlar — bu ayki verimi yüksek balıklar
+  const { data: seasonalYields } = await supabase
+    .from('monthly_yield')
+    .select('fish_id, yield_score')
+    .eq('month', CURRENT_MONTH)
+    .gte('yield_score', 60)
+    .order('yield_score', { ascending: false })
+    .limit(8);
 
-  // 2. Son Eklenen Balıkları Çek (Öne Çıkanlar için)
-  const { data: fishes } = await supabase
+  const seasonalFishIds = seasonalYields?.map(y => y.fish_id) || [];
+
+  const { data: seasonalFish } = seasonalFishIds.length > 0
+    ? await supabase
+        .from('fish')
+        .select('id, slug, name_tr, name_latin, water_type, cover_image_url, categories(name_tr)')
+        .eq('is_published', true)
+        .in('id', seasonalFishIds)
+    : { data: [] };
+
+  // Mevsimsel verim skorlarını birleştir
+  const fishWithScore = (seasonalFish || []).map(f => ({
+    ...f,
+    score: seasonalYields?.find(y => y.fish_id === f.id)?.yield_score || 0,
+  })).sort((a, b) => b.score - a.score);
+
+  // Son eklenen türler (mevsimsel yoksa burası gösterilir)
+  const { data: recentFish } = await supabase
     .from('fish')
     .select('id, slug, name_tr, name_latin, water_type, cover_image_url, categories(name_tr)')
     .eq('is_published', true)
     .order('created_at', { ascending: false })
     .limit(6);
 
-  // 3. Balıkçılık Yöntemlerini Çek
+  // Kategoriler
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name_tr, slug')
+    .is('parent_id', null)
+    .order('name_tr')
+    .limit(8);
+
+  // Yöntemler
   const { data: methods } = await supabase
     .from('fishing_methods')
-    .select('id, slug, title, content')
+    .select('id, slug, title')
     .eq('is_published', true)
-    .order('title');
+    .order('title')
+    .limit(6);
+
+  const displayFish = fishWithScore.length > 0 ? fishWithScore : (recentFish || []).map(f => ({ ...f, score: 0 }));
+  const isSeasonalDisplay = fishWithScore.length > 0;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* HERO BÖLÜMÜ (Karşılama Ekranı) */}
-      <section className="bg-slate-900 text-white py-12 md:py-20 px-4">
-        <div className="max-w-md mx-auto md:max-w-5xl text-center md:text-left">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-            Türkiye'nin Balıkçılık Ansiklopedisi
+    <main className="min-h-screen bg-[#f8f9fb]">
+
+      {/* HERO */}
+      <section className="relative bg-[#0d1b2a] text-white overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b2a] via-[#1a2f45] to-[#0d1b2a] opacity-100" />
+        {/* Dekoratif dalgalar */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16">
+          <svg viewBox="0 0 1440 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <path d="M0 32C240 0 480 64 720 32C960 0 1200 64 1440 32V64H0V32Z" fill="#f8f9fb" />
+          </svg>
+        </div>
+
+        <div className="relative max-w-md mx-auto md:max-w-5xl px-5 py-14 md:py-20 pb-20 md:pb-24">
+          {/* Logo + Marka */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+              <svg className="w-5 h-5 md:w-6 md:h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+              </svg>
+            </div>
+            <span className="font-playfair text-xl md:text-2xl font-bold tracking-wide text-white/90">Avlak</span>
+          </div>
+
+          <h1 className="font-playfair text-3xl md:text-5xl font-bold leading-tight mb-3 text-white">
+            Türkiye'nin<br className="md:hidden" /> Balıkçılık<br className="md:hidden" /> Ansiklopedisi
           </h1>
-          <p className="text-slate-400 text-base md:text-lg max-w-2xl mb-8">
-            Tatlı ve tuzlu su balıkları, avlanma teknikleri, yasal limitler ve verim grafikleri ile donatılmış kapsamlı rehberiniz.
+          <p className="text-blue-200/80 text-sm md:text-base max-w-xl mb-8 leading-relaxed">
+            Tatlı ve tuzlu su balık türleri, avlanma teknikleri, mevsimsel rehberler ve yasal düzenlemeler tek platformda.
           </p>
-          <SearchAutocomplete />
+
+          <div className="max-w-lg">
+            <SearchAutocomplete />
+          </div>
         </div>
       </section>
 
-      <div className="max-w-md mx-auto md:max-w-5xl px-4 py-12 space-y-16">
-        
-        {/* KATEGORİLER BÖLÜMÜ */}
+      <div className="max-w-md mx-auto md:max-w-5xl px-4 py-8 md:py-12 space-y-12">
+
+        {/* HIZLI ERİŞİM */}
         <section>
-          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-2">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-            <h2 className="text-2xl font-bold text-gray-900">Kategoriler</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {categories?.map(cat => (
-              <Link href={`/kategori/${cat.slug}`} key={cat.id}>
-                <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer h-full">
-                  <h3 className="font-bold text-lg text-gray-900 mb-1">{cat.name_tr}</h3>
-                  {cat.description && <p className="text-sm text-gray-500 line-clamp-2">{cat.description}</p>}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {QUICK_LINKS.map(l => (
+              <Link key={l.href} href={l.href}>
+                <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group">
+                  <p className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{l.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{l.desc}</p>
                 </div>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* BALIKÇILIK ÇEŞİTLERİ (DİSİPLİNLER) */}
+        {/* MEVSİMSEL ÖNE ÇIKANLAR */}
+        <section>
+          <div className="flex items-baseline gap-3 mb-5">
+            <h2 className="font-playfair text-2xl md:text-3xl font-bold text-gray-900">
+              {isSeasonalDisplay ? `${SEASON_NAME()} Sezonu` : 'Son Eklenen Türler'}
+            </h2>
+            {isSeasonalDisplay && (
+              <span className="text-xs font-semibold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
+                Yüksek Verim
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {displayFish.slice(0, 6).map((fish: any) => (
+              <Link href={`/balik/${fish.slug}`} key={fish.id}>
+                <div className="bg-white rounded-xl border border-gray-200 hover:border-blue-200 hover:shadow-md transition-all overflow-hidden group cursor-pointer">
+                  <div className="h-36 md:h-44 bg-gray-50 relative overflow-hidden">
+                    {fish.cover_image_url ? (
+                      <img src={fish.cover_image_url} alt={fish.name_tr}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+                        <svg className="w-8 h-8 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01" />
+                        </svg>
+                      </div>
+                    )}
+                    {fish.score >= 75 && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        Pik
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent" />
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">
+                      {(fish.categories as any)?.name_tr || '—'}
+                    </p>
+                    <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-1">{fish.name_tr}</h3>
+                    {fish.name_latin && (
+                      <p className="text-[10px] text-gray-400 italic mt-0.5 line-clamp-1">{fish.name_latin}</p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center mt-5">
+            <Link href="/kategori/tum-baliklar">
+              <span className="inline-block text-sm font-semibold text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 rounded-full px-5 py-2.5 transition-all hover:bg-blue-50">
+                Tum Balik Turlerini Goster
+              </span>
+            </Link>
+          </div>
+        </section>
+
+        {/* BALIKÇILIK YÖNTEMLERİ */}
         {methods && methods.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-2">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              <h2 className="text-2xl font-bold text-gray-900">Balıkçılık Çeşitleri</h2>
+            <div className="flex items-baseline gap-3 mb-5">
+              <h2 className="font-playfair text-2xl md:text-3xl font-bold text-gray-900">Avlanma Yöntemleri</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {methods.map(method => (
-                <Link href={`/yontem/${method.slug}`} key={method.id}>
-                  <div className="bg-blue-50 hover:bg-blue-100 p-5 rounded-lg border border-blue-100 transition-colors h-full flex flex-col justify-center items-center text-center">
-                    <h3 className="font-bold text-blue-900">{method.title}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {methods.map(m => (
+                <Link href={`/yontem/${m.slug}`} key={m.id}>
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all group">
+                    <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{m.title}</h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Teknik rehber</p>
                   </div>
                 </Link>
               ))}
@@ -85,51 +211,50 @@ export default async function Home() {
           </section>
         )}
 
-        {/* ÖNE ÇIKAN BALIKLAR */}
-        <section>
-          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-2">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <h2 className="text-2xl font-bold text-gray-900">Son Eklenen Türler</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {fishes?.map((fish: any) => (
-              <Link href={`/balik/${fish.slug}`} key={fish.id}>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all h-full flex flex-col overflow-hidden group">
-                  
-                  {/* FOTOĞRAF ALANI */}
-                  <div className="h-48 bg-gray-50 relative border-b border-gray-100 overflow-hidden">
-                    {fish.cover_image_url ? (
-                      <img 
-                        src={fish.cover_image_url} 
-                        alt={fish.name_tr} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      </div>
-                    )}
-                  </div>
+        {/* KATEGORİLER / FAMİLYALAR */}
+        {categories && categories.length > 0 && (
+          <section>
+            <div className="flex items-baseline gap-3 mb-5">
+              <h2 className="font-playfair text-2xl md:text-3xl font-bold text-gray-900">Balik Familyalari</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => (
+                <Link key={cat.id} href={`/kategori/${cat.slug}`}>
+                  <span className="inline-block bg-white border border-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-full hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                    {cat.name_tr}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
-                  {/* METİN ALANI */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1.5">
-                      {fish.categories?.name_tr || 'Genel'}
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 leading-tight">{fish.name_tr}</h3>
-                    <p className="text-sm text-gray-500 italic mb-4">{fish.name_latin}</p>
-                    
-                    <div className="flex gap-2 mt-auto pt-4 border-t border-gray-50">
-                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide">
-                        {fish.water_type === 'fresh' ? 'Tatlı Su' : fish.water_type === 'salt' ? 'Tuzlu Su' : 'Tatlı & Tuzlu Su'}
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-              </Link>
-            ))}
-          </div>
+        {/* HIZLI BİLGİ KARTLARI */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
+          <Link href="/yasal">
+            <div className="bg-[#0d1b2a] text-white rounded-2xl p-6 hover:shadow-xl transition-all">
+              <p className="text-blue-300 text-xs font-semibold uppercase tracking-wider mb-2">Guncel Bilgi</p>
+              <h3 className="font-playfair text-xl font-bold mb-1">Yasal Boy Limitleri</h3>
+              <p className="text-gray-400 text-sm">Tum turlerin av limitleri ve yasaklari</p>
+              <p className="text-blue-400 text-xs mt-4 font-semibold">Incele</p>
+            </div>
+          </Link>
+          <Link href="/takvim">
+            <div className="bg-blue-600 text-white rounded-2xl p-6 hover:shadow-xl transition-all">
+              <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mb-2">Mevsimsel Rehber</p>
+              <h3 className="font-playfair text-xl font-bold mb-1">Av Takvimi</h3>
+              <p className="text-blue-100 text-sm">Hangi ay hangi balik aktiftir?</p>
+              <p className="text-blue-300 text-xs mt-4 font-semibold">Takvimi Goster</p>
+            </div>
+          </Link>
+          <Link href="/baslangic">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-md hover:border-blue-200 transition-all">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Yeni Baslayanlar</p>
+              <h3 className="font-playfair text-xl font-bold text-gray-900 mb-1">Baslangic Rehberi</h3>
+              <p className="text-gray-500 text-sm">Ilk ekipmandan ilk ava</p>
+              <p className="text-blue-600 text-xs mt-4 font-semibold">Okumaya Basla</p>
+            </div>
+          </Link>
         </section>
 
       </div>
