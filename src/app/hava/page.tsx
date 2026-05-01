@@ -125,7 +125,7 @@ export default function HavaDurumuPage() {
 
         {/* BAŞLIK */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">🌤️ Hava & Su Durumu</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">Hava & Su Durumu</h1>
           <p className="text-gray-500 text-sm mt-1">Hangi hava koşullarında hangi balık avlanır?</p>
         </div>
 

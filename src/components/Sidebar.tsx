@@ -48,22 +48,24 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
 
   const sortedEquipCats = categoryOrder.filter(c => equipmentCategories[c]);
 
-  // 4. WIKI LİNKLERİ (Statik bölümler)
+  // 4. WIKI LİNKLERİ (Statik kategoriler gibi)
   const WikiSection = () => (
-    <div className="border-t border-gray-100 pt-2 mt-1">
-      <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Wiki Bölümleri</div>
+    <div className="border-t border-gray-100 pt-3 mt-1">
+      <div className="px-3 mb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Wiki</div>
       <div className="space-y-0.5">
         {[
-          { href: '/avlak', label: '🗺️ Avlak Noktaları' },
-          { href: '/takvim', label: '📅 Av Takvimi' },
-          { href: '/yasal', label: '⚖️ Yasal Düzenlemeler' },
-          { href: '/yem-tarifleri', label: '🧪 Yem Tarifleri' },
-          { href: '/hava', label: '🌤️ Hava & Su Durumu' },
-          { href: '/baslangic', label: '🎣 Başlangıç Rehberi' },
+          { href: '/avlak', label: 'Avlak Noktaları' },
+          { href: '/takvim', label: 'Av Takvimi' },
+          { href: '/yasal', label: 'Yasal Düzenlemeler' },
+          { href: '/yem-tarifleri', label: 'Yem Tarifleri' },
+          { href: '/hava', label: 'Hava & Su Durumu' },
+          { href: '/baslangic', label: 'Başlangıç Rehberi' },
         ].map(l => (
           <Link key={l.href} href={l.href} onClick={() => setIsOpen(false)}
             className={`block px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              pathname === l.href ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+              pathname === l.href
+                ? 'text-blue-600 font-semibold bg-blue-50'
+                : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
             }`}>
             {l.label}
           </Link>

@@ -173,7 +173,7 @@ export default function AvlakHaritasiPage() {
 
         {/* BAŞLIK */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">🗺️ Avlak Noktaları</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">Avlak Noktaları</h1>
           <p className="text-gray-500 text-sm mt-1">Türkiye genelinde en iyi balıkçılık noktaları</p>
         </div>
 
@@ -188,12 +188,13 @@ export default function AvlakHaritasiPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* HARİTA */}
-          <div className="md:col-span-2">
+          {/* HARİTA — z-index:0 ile sidebar altında kalır */}
+          <div className="md:col-span-2" style={{ position: 'relative', zIndex: 0 }}>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
             <div ref={mapRef} className="w-full rounded-2xl overflow-hidden border border-gray-200 shadow-md" style={{ height: '450px' }} />
             <p className="text-xs text-gray-400 text-center mt-2">Haritada noktaya tıklayarak detayları görün</p>
           </div>
+
 
           {/* LİSTE + DETAY */}
           <div className="space-y-3">

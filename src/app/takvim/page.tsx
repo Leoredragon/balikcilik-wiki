@@ -54,7 +54,7 @@ export default function TakvimPage() {
     <main className="min-h-screen bg-gray-50 pb-12">
       <div className="max-w-md mx-auto md:max-w-5xl p-4 md:p-8 mt-4 space-y-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">📅 Mevsimsel Av Takvimi</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">Mevsimsel Av Takvimi</h1>
           <p className="text-gray-500 text-sm mt-1">Hangi ay hangi balık nerelerde aktiftir?</p>
         </div>
 
