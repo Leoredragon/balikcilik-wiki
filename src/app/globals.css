@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+body {
+  background-color: #f9fafb;
+  /* Açık gri profesyonel arka plan (gray-50) */
+  color: #111827;
+  /* Koyu gri okunabilir metin rengi (gray-900) */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply selection:bg-blue-100 selection:text-blue-900;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Kaydırma çubuğunu gizlemek için yardımcı sınıf */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Kartların üzerine gelince yumuşak bir gölge ve yükselme efekti */
+.wiki-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wiki-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1);
+}
+
+/* Admin panelindeki formların daha profesyonel görünmesi için */
+input:focus, textarea:focus, select:focus {
+  @apply border-blue-500 ring-4 ring-blue-500/10;
 }
