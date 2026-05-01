@@ -113,7 +113,7 @@ export default async function Home() {
           </p>
 
           <div className="max-w-lg">
-            <SearchAutocomplete />
+            <SearchAutocomplete variant="dark" />
           </div>
         </div>
       </section>

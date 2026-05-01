@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { createClient } from "@/utils/supabase/server";
@@ -11,10 +11,11 @@ const inter = Inter({
   display: "swap",
 });
 
-const playfair = Playfair_Display({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-playfair",
+  variable: "--font-dm",
   display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -50,7 +51,7 @@ export default async function RootLayout({
     .order("title", { ascending: true });
 
   return (
-    <html lang="tr" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="tr" className={`${inter.variable} ${dmSans.variable}`}>
       <body className="font-inter bg-gray-50 text-gray-900 flex min-h-screen antialiased">
         <Sidebar
           fishes={fishes || []}

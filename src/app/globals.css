@@ -11,7 +11,8 @@ body {
     @apply selection:bg-blue-100 selection:text-blue-900;
   }
   .font-inter { font-family: var(--font-inter), system-ui, sans-serif; }
-  .font-playfair { font-family: var(--font-playfair), Georgia, serif; }
+  .font-dm    { font-family: var(--font-dm), system-ui, sans-serif; }
+  .font-playfair { font-family: var(--font-dm), system-ui, sans-serif; } /* alias - eskisi icin */
 }
 
 /* Scrollbar gizleme */
