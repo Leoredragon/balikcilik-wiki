@@ -5,34 +5,32 @@ import { createClient } from '@/utils/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
+const inputCls = "w-full p-3 text-base bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500";
+
 export default function YontemDuzenlePage() {
   const router = useRouter();
-  const params = useParams();
+  const { id: methodId } = useParams();
   const supabase = createClient();
-  const methodId = params.id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
   const [formData, setFormData] = useState<any>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchMethod() {
-      const { data } = await supabase.from('fishing_methods').select('*').eq('id', methodId).single();
-      if (data) setFormData(data);
-      setLoading(false);
-    }
-    fetchMethod();
+    supabase.from('fishing_methods').select('*').eq('id', methodId).single()
+      .then(({ data }) => { if (data) setFormData(data); setLoading(false); });
   }, [methodId, supabase]);
 
+  const f = (key: string) => formData[key] || '';
+  const set = (key: string, val: any) => setFormData((p: any) => ({ ...p, [key]: val }));
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files?.[0]) {
+      setImageFile(e.target.files[0]);
+      setImagePreview(URL.createObjectURL(e.target.files[0]));
     }
   };
 
@@ -42,130 +40,115 @@ export default function YontemDuzenlePage() {
     setError('');
 
     let finalImageUrl = formData.cover_image_url;
-
     if (imageFile) {
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `method-${formData.slug}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage.from('fish-images').upload(fileName, imageFile, { upsert: true });
-      if (uploadError) {
-        setError('Fotoğraf yüklenirken hata oluştu: ' + uploadError.message);
-        setSaving(false);
-        return;
-      }
-      const { data: publicUrlData } = supabase.storage.from('fish-images').getPublicUrl(fileName);
-      finalImageUrl = publicUrlData.publicUrl;
+      const ext = imageFile.name.split('.').pop();
+      const fileName = `method-${formData.slug}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('fish-images').upload(fileName, imageFile, { upsert: true });
+      if (upErr) { setError('Fotoğraf yüklenemedi: ' + upErr.message); setSaving(false); return; }
+      const { data: pub } = supabase.storage.from('fish-images').getPublicUrl(fileName);
+      finalImageUrl = pub.publicUrl;
     }
 
     const { error: updateError } = await supabase.from('fishing_methods').update({
       title: formData.title,
       slug: formData.slug,
       content: formData.content,
+      suitable_fish: formData.suitable_fish,
+      target_fishes: formData.suitable_fish,
+      best_season: formData.best_season,
       gear_requirements: formData.gear_requirements,
-      target_fishes: formData.target_fishes,
+      step_by_step: formData.step_by_step,
+      common_mistakes: formData.common_mistakes,
       cover_image_url: finalImageUrl,
       is_published: formData.is_published
     }).eq('id', methodId);
 
-    if (updateError) {
-      setError(`Güncelleme başarısız: ${updateError.message}`);
-      setSaving(false);
-    } else {
-      router.push('/admin/yontemler');
-      router.refresh();
-    }
+    if (updateError) { setError(updateError.message); setSaving(false); return; }
+    router.push('/admin/yontemler');
+    router.refresh();
   };
 
-  if (loading) return <div className="p-8 text-center font-medium text-gray-600 mt-20">Veriler yükleniyor...</div>;
+  if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
+
+  const Section = ({ title, children }: any) => (
+    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+      <h2 className="font-bold text-gray-900 border-b pb-2">{title}</h2>
+      {children}
+    </div>
+  );
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24 md:pb-12">
+    <main className="min-h-screen bg-gray-50 pb-24">
       <div className="bg-slate-900 text-white p-4 sticky top-0 z-10 flex justify-between items-center shadow-md">
-        <h1 className="font-bold text-lg tracking-tight">Yöntemi Düzenle</h1>
-        <Link href="/admin/yontemler" className="text-sm font-medium text-slate-300 hover:text-white">← İptal</Link>
+        <h1 className="font-bold text-lg">Yöntemi Düzenle</h1>
+        <Link href="/admin/yontemler" className="text-sm text-slate-300">← İptal</Link>
       </div>
 
-      <div className="p-4 md:p-8 max-w-md mx-auto md:max-w-2xl mt-4">
-        {error && <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-lg text-sm font-medium border border-red-100">{error}</div>}
+      {error && <div className="m-4 bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{error}</div>}
 
-        <form onSubmit={handleSave} className="space-y-6">
-          
-          {/* KAPAK FOTOĞRAFI */}
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-            <h2 className="font-bold text-gray-900 border-b pb-2">Kapak Fotoğrafı</h2>
-            <div className="flex flex-col items-center gap-4">
-              {(imagePreview || formData.cover_image_url) ? (
-                <div className="w-full h-48 relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                  <img src={imagePreview || formData.cover_image_url} alt="Önizleme" className="object-cover w-full h-full" />
-                </div>
-              ) : (
-                <div className="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-2">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <span className="text-sm">Görsel Yok</span>
-                </div>
-              )}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-base text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-            </div>
-          </div>
+      <form onSubmit={handleSave} className="p-4 max-w-2xl mx-auto space-y-5 mt-4">
 
-          {/* TEMEL BİLGİLER */}
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-            <h2 className="font-bold text-gray-900 border-b pb-2">Disiplin Bilgileri</h2>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Yöntem Adı *</label>
-              <input required type="text" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})}
-                className="w-full p-3 text-base border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-            </div>
+        {/* KAPAK FOTOĞRAFI */}
+        <Section title="Kapak Fotoğrafı">
+          {(imagePreview || formData.cover_image_url)
+            ? <div className="w-full h-48 rounded-lg overflow-hidden border border-gray-200"><img src={imagePreview || formData.cover_image_url} className="w-full h-full object-cover" /></div>
+            : <div className="w-full h-28 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-sm">Görsel Yok</div>
+          }
+          <input type="file" accept="image/*" onChange={handleImageChange}
+            className="w-full text-base text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700" />
+        </Section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL (Slug) *</label>
-              <input required type="text" value={formData.slug || ''} onChange={e => setFormData({...formData, slug: e.target.value})}
-                className="w-full p-3 text-base border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-500" />
-            </div>
-          </div>
+        {/* KİMLİK */}
+        <Section title="① Temel Bilgiler">
+          <input required className={inputCls} value={f('title')} onChange={e => set('title', e.target.value)} placeholder="Yöntem Adı (Örn: Spin Balıkçılığı)" />
+          <input required className={`${inputCls} text-gray-500`} value={f('slug')} onChange={e => set('slug', e.target.value)} placeholder="URL slug (örn: spin-balikcilik)" />
+        </Section>
 
-          {/* İÇERİK */}
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-            <h2 className="font-bold text-gray-900 border-b pb-2">Rehber İçeriği</h2>
+        {/* GENEL ANLATIM */}
+        <Section title="② Genel Anlatım ve Teknikler">
+          <textarea rows={6} className={inputCls} value={f('content')} onChange={e => set('content', e.target.value)} placeholder="Bu yöntemin nasıl yapıldığını, temel tekniklerini ve prensiplerini anlat..." />
+        </Section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Genel Anlatım ve Teknikler</label>
-              <textarea rows={6} value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})}
-                className="w-full p-3 text-base border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 resize-y" />
-            </div>
+        {/* HANGİ BALIKLAR */}
+        <Section title="③ Hangi Balıklar İçin Uygun?">
+          <textarea rows={3} className={inputCls} value={f('suitable_fish')} onChange={e => set('suitable_fish', e.target.value)} placeholder="Levrek, Sazan, Sudak... hangi türler için idealdir?" />
+        </Section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ekipman Tavsiyeleri</label>
-              <textarea rows={4} value={formData.gear_requirements || ''} onChange={e => setFormData({...formData, gear_requirements: e.target.value})}
-                className="w-full p-3 text-base border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 resize-y" />
-            </div>
+        {/* MEVSİM */}
+        <Section title="④ Hangi Mevsim / Ay / Saat?">
+          <textarea rows={3} className={inputCls} value={f('best_season')} onChange={e => set('best_season', e.target.value)} placeholder="İlkbahar ve Sonbahar en verimli dönemlerdir. Sabah erken saatlerde ve akşam üstü..." />
+        </Section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hedeflenen Balıklar</label>
-              <textarea rows={2} value={formData.target_fishes || ''} onChange={e => setFormData({...formData, target_fishes: e.target.value})}
-                className="w-full p-3 text-base border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 resize-y" />
-            </div>
-          </div>
+        {/* EKİPMAN */}
+        <Section title="⑤ Hangi Ekipman Gerekli?">
+          <textarea rows={4} className={inputCls} value={f('gear_requirements')} onChange={e => set('gear_requirements', e.target.value)} placeholder="Kamış: 2.7m orta aksiyon spin kamış, Makine: 2500 beden, İp: PE0.6 örgü..." />
+        </Section>
 
-          {/* YAYIN DURUMU */}
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={formData.is_published || false} onChange={e => setFormData({...formData, is_published: e.target.checked})}
-                className="w-6 h-6 text-blue-600 rounded border-gray-300 accent-blue-600" />
-              <span className="text-base font-medium text-gray-900">Siteye Yayınla (Herkes Görebilir)</span>
-            </label>
-          </div>
+        {/* ADIM ADIM */}
+        <Section title="⑥ Adım Adım Uygulama">
+          <textarea rows={6} className={inputCls} value={f('step_by_step')} onChange={e => set('step_by_step', e.target.value)} placeholder="1. Yemi takın...\n2. Atışı yapın...\n3. Çekişe başlayın..." />
+        </Section>
 
-          {/* KAYDET BUTONU - Mobilde sabit, masaüstünde normal */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 flex gap-4 md:static md:bg-transparent md:border-0 md:p-0 z-20">
-            <button type="submit" disabled={saving}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 md:py-3.5 rounded-xl md:rounded-lg font-bold text-lg md:text-base shadow-lg active:scale-95 transition-all disabled:opacity-70">
-              {saving ? 'Görsel Yükleniyor...' : 'Değişiklikleri Kaydet'}
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* HATALAR */}
+        <Section title="⑦ Yapılan Hatalar ve Çözümleri">
+          <textarea rows={4} className={inputCls} value={f('common_mistakes')} onChange={e => set('common_mistakes', e.target.value)} placeholder="Hata: Çok hızlı çekmek → Çözüm: Yavaş ve düzenli çekim yapın..." />
+        </Section>
+
+        {/* YAYIN */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={formData.is_published || false} onChange={e => set('is_published', e.target.checked)} className="w-6 h-6 accent-blue-600 rounded" />
+            <span className="text-base font-medium text-gray-900">Siteye Yayınla</span>
+          </label>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex gap-4 md:static md:bg-transparent md:border-0 md:p-0 z-20">
+          <button type="submit" disabled={saving}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 md:py-3.5 rounded-xl md:rounded-lg font-bold text-lg md:text-base shadow-lg active:scale-95 transition-all disabled:opacity-70">
+            {saving ? 'Kaydediliyor...' : '✓ Değişiklikleri Kaydet'}
+          </button>
+        </div>
+      </form>
     </main>
   );
 }

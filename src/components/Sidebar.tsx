@@ -48,6 +48,30 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
 
   const sortedEquipCats = categoryOrder.filter(c => equipmentCategories[c]);
 
+  // 4. WIKI LİNKLERİ (Statik bölümler)
+  const WikiSection = () => (
+    <div className="border-t border-gray-100 pt-2 mt-1">
+      <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Wiki Bölümleri</div>
+      <div className="space-y-0.5">
+        {[
+          { href: '/avlak', label: '🗺️ Avlak Noktaları' },
+          { href: '/takvim', label: '📅 Av Takvimi' },
+          { href: '/yasal', label: '⚖️ Yasal Düzenlemeler' },
+          { href: '/yem-tarifleri', label: '🧪 Yem Tarifleri' },
+          { href: '/hava', label: '🌤️ Hava & Su Durumu' },
+          { href: '/baslangic', label: '🎣 Başlangıç Rehberi' },
+        ].map(l => (
+          <Link key={l.href} href={l.href} onClick={() => setIsOpen(false)}
+            className={`block px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              pathname === l.href ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+            }`}>
+            {l.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+
   const MenuContent = () => (
     <div className="flex-1 overflow-y-auto py-4 px-4 space-y-1 scrollbar-hide">
 
@@ -69,7 +93,6 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
 
         {openMain === 'baliklar' && (
           <div className="ml-4 space-y-1 mt-1">
-            {/* Tatlı Su */}
             <button onClick={() => toggleSub('tatliSu')} className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-blue-600 uppercase tracking-wider hover:bg-blue-50/60 rounded-md transition-colors">
               <span>Tatlı Su Balıkları</span>
               <span className="text-base font-light">{openSub === 'tatliSu' ? '−' : '+'}</span>
@@ -85,8 +108,6 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
                 ))}
               </ul>
             )}
-
-            {/* Tuzlu Su */}
             <button onClick={() => toggleSub('tuzluSu')} className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-blue-600 uppercase tracking-wider hover:bg-blue-50/60 rounded-md transition-colors">
               <span>Tuzlu Su Balıkları</span>
               <span className="text-base font-light">{openSub === 'tuzluSu' ? '−' : '+'}</span>
@@ -126,12 +147,11 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
       </div>
 
       {/* --- 3. EKİPMAN REHBERİ --- */}
-      <div>
+      <div className="border-b border-gray-100 pb-1">
         <button onClick={() => toggleMain('ekipmanlar')} className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold rounded-lg transition-colors ${openMain === 'ekipmanlar' ? 'text-blue-600 bg-blue-50' : 'text-gray-900 hover:bg-gray-50'}`}>
           <span>Ekipman Rehberi</span>
           <svg className={`w-4 h-4 transition-transform duration-200 ${openMain === 'ekipmanlar' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-
         {openMain === 'ekipmanlar' && (
           <div className="ml-4 mt-1 space-y-1">
             {sortedEquipCats.map(catName => (
@@ -156,8 +176,12 @@ export default function Sidebar({ fishes, methods, equipments }: { fishes: any[]
           </div>
         )}
       </div>
+
+      {/* --- 4. WİKİ BÖLÜMLERİ --- */}
+      <WikiSection />
     </div>
   );
+
 
   return (
     <>
