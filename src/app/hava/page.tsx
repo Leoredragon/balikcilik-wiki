@@ -13,15 +13,15 @@ const CITIES = [
 ];
 
 const FISHING: Record<string, { label: string; color: string; tip: string }> = {
-  Clear:        { label: 'Acik Hava',   color: 'text-green-700 bg-green-50 border-green-100',   tip: 'Mukemmel av kosullari. Sazan, levrek ve cupra aktif.' },
-  Clouds:       { label: 'Bulutlu',     color: 'text-blue-700 bg-blue-50 border-blue-100',      tip: 'Bulutlu hava balik aktivitesi icin idealdir.' },
-  Rain:         { label: 'Yagmurlu',    color: 'text-slate-700 bg-slate-50 border-slate-100',   tip: 'Hafif yagmur sazan icin olumlu. Firtinada avlanmayin.' },
-  Drizzle:      { label: 'Cisenti',     color: 'text-teal-700 bg-teal-50 border-teal-100',      tip: 'Cisenti gun batiminda levrek icin idealdir.' },
-  Thunderstorm: { label: 'Firtina',     color: 'text-red-700 bg-red-50 border-red-100',         tip: 'Tehlikeli — kesinlikle avlanmayin!' },
-  Snow:         { label: 'Karli',       color: 'text-indigo-700 bg-indigo-50 border-indigo-100',tip: 'Buzalti balikciligi yapilabilir.' },
+  Clear:        { label: 'Acik Hava',   color: 'text-green-700 bg-green-50 border-green-200',   tip: 'Mukemmel av kosullari. Sazan, levrek ve cupra aktif.' },
+  Clouds:       { label: 'Bulutlu',     color: 'text-blue-700 bg-blue-50 border-blue-200',      tip: 'Bulutlu hava balik aktivitesi icin idealdir.' },
+  Rain:         { label: 'Yagmurlu',    color: 'text-slate-700 bg-slate-50 border-slate-200',   tip: 'Hafif yagmur sazan icin olumlu. Firtinada avlanmayin.' },
+  Drizzle:      { label: 'Cisenti',     color: 'text-teal-700 bg-teal-50 border-teal-200',      tip: 'Cisenti gun batiminda levrek icin idealdir.' },
+  Thunderstorm: { label: 'Firtina',     color: 'text-red-700 bg-red-50 border-red-200',         tip: 'Tehlikeli — kesinlikle avlanmayin!' },
+  Snow:         { label: 'Karli',       color: 'text-indigo-700 bg-indigo-50 border-indigo-200',tip: 'Buzalti balikciligi yapilabilir.' },
   Mist:         { label: 'Sisli',       color: 'text-gray-700 bg-gray-100 border-gray-200',     tip: 'Gorus dusuk, guvenli noktalarda avlanin.' },
   Fog:          { label: 'Yogun Sis',   color: 'text-gray-700 bg-gray-100 border-gray-200',     tip: 'Gorus cok dusuk — tekneyle cikmayin.' },
-  Haze:         { label: 'Puslu',       color: 'text-amber-700 bg-amber-50 border-amber-100',   tip: 'Orta kosullar. Sabah erken saatler daha iyi.' },
+  Haze:         { label: 'Puslu',       color: 'text-amber-700 bg-amber-50 border-amber-200',   tip: 'Orta kosullar. Sabah erken saatler daha iyi.' },
 };
 
 const windDir = (deg: number) => {
@@ -30,21 +30,13 @@ const windDir = (deg: number) => {
 };
 
 const pressureInfo = (p: number) => {
-  if (p > 1020) return { text: `${p} hPa — Yüksek Basınç`, tip: 'Dip baliklari aktif. Sazan, levrek, çipura için iyi.', cls: 'text-green-700' };
-  if (p < 1010) return { text: `${p} hPa — Düşük Basınç`,  tip: 'Baliklar daha az aktif olabilir, yüzey beslenme artar.', cls: 'text-amber-700' };
-  return           { text: `${p} hPa — Normal Basınç`,  tip: 'Dengeli kosullar — cogu tür aktif.', cls: 'text-blue-700' };
-};
-
-const uviInfo = (uvi: number) => {
-  if (uvi >= 8) return { text: 'Cok Yuksek UV', cls: 'text-red-600' };
-  if (uvi >= 6) return { text: 'Yuksek UV', cls: 'text-orange-500' };
-  if (uvi >= 3) return { text: 'Orta UV', cls: 'text-amber-500' };
-  return           { text: 'Dusuk UV', cls: 'text-green-600' };
+  if (p > 1020) return { text: `${p} hPa — Yuksek Basinc`, tip: 'Dip baliklari aktif. Sazan, levrek, cupra icin iyi.', cls: 'text-green-700' };
+  if (p < 1010) return { text: `${p} hPa — Dusuk Basinc`,  tip: 'Baliklar daha az aktif olabilir.', cls: 'text-amber-700' };
+  return           { text: `${p} hPa — Normal Basinc`,  tip: 'Dengeli kosullar — cogu tur aktif.', cls: 'text-blue-700' };
 };
 
 /* ─── CACHE (30 dakika) ─────────────────────────────────────── */
 const CACHE_TTL = 30 * 60 * 1000;
-const cacheKey = (lat: number, lon: number) => `wx_${lat.toFixed(2)}_${lon.toFixed(2)}`;
 
 function readCache(key: string) {
   try {
@@ -60,17 +52,18 @@ function writeCache(key: string, data: any) {
   try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
-/* ─── INTERFACES ────────────────────────────────────────────── */
-interface DailyItem {
-  dt: number;
-  temp: { min: number; max: number; day: number };
-  weather: { main: string; description: string; icon: string }[];
+interface ForecastDay {
+  date: string;
+  dayLabel: string;
+  tempMin: number;
+  tempMax: number;
+  desc: string;
   pop: number;
-  humidity: number;
 }
 
 interface WeatherState {
   city: string;
+  country: string;
   temp: number;
   feels_like: number;
   humidity: number;
@@ -78,85 +71,100 @@ interface WeatherState {
   wind_deg: number;
   pressure: number;
   visibility: number;
-  uvi: number;
   weather_main: string;
   weather_desc: string;
-  daily: DailyItem[];
   sunrise: number;
   sunset: number;
+  forecast: ForecastDay[];
 }
 
 const API = process.env.NEXT_PUBLIC_OPENWEATHER_KEY;
+const BASE = 'https://api.openweathermap.org';
 
-/* ─── ONE CALL 3.0 FETCH ────────────────────────────────────── */
-async function fetchOneCall(lat: number, lon: number, cityLabel: string): Promise<WeatherState> {
-  const key = cacheKey(lat, lon);
-  const cached = readCache(key);
-  if (cached) return { ...cached, city: cityLabel || cached.city };
-
-  const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,alerts&appid=${API}&units=metric&lang=tr`;
+/* ─── API ÇAĞRILARI — sadece ücretsiz endpointler ──────────── */
+async function getCurrentWeather(lat: number, lon: number) {
+  const url = `${BASE}/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API}&units=metric&lang=tr`;
   const res = await fetch(url);
   if (!res.ok) {
-    // One Call 3.0 abonelik gerektirebilir — 2.5 fallback
-    const url25 = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API}&units=metric&lang=tr`;
-    const res25 = await fetch(url25);
-    if (!res25.ok) throw new Error(`API hatası: ${res25.status} — API anahtarını ve aboneliği kontrol edin.`);
-    const d = await res25.json();
-    const state: WeatherState = {
-      city: cityLabel || d.name,
-      temp: Math.round(d.main.temp),
-      feels_like: Math.round(d.main.feels_like),
-      humidity: d.main.humidity,
-      wind_speed: Math.round(d.wind.speed * 3.6),
-      wind_deg: d.wind.deg || 0,
-      pressure: d.main.pressure,
-      visibility: Math.round((d.visibility || 10000) / 1000),
-      uvi: 0,
-      weather_main: d.weather[0].main,
-      weather_desc: d.weather[0].description,
-      daily: [],
-      sunrise: d.sys.sunrise,
-      sunset: d.sys.sunset,
-    };
-    writeCache(key, state);
-    return state;
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`Hava durumu alinamadi (${res.status}): ${body.message || 'Bilinmeyen hata'}`);
   }
+  return res.json();
+}
 
-  const d = await res.json();
-  const cur = d.current;
+async function getForecast(lat: number, lon: number) {
+  const url = `${BASE}/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API}&units=metric&lang=tr&cnt=40`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Geocoding — ücretsiz, limit yok
+async function geocodeCity(city: string) {
+  const res = await fetch(`${BASE}/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data?.length) return null;
+  return { lat: data[0].lat, lon: data[0].lon, name: data[0].local_names?.tr || data[0].name };
+}
+
+// 3 saatlik forecast -> günlük özetle
+function parseForecast(data: any): ForecastDay[] {
+  if (!data?.list) return [];
+  const days: Record<string, any[]> = {};
+  data.list.forEach((item: any) => {
+    const d = new Date(item.dt * 1000);
+    const key = d.toISOString().split('T')[0];
+    if (!days[key]) days[key] = [];
+    days[key].push(item);
+  });
+  return Object.entries(days).slice(0, 5).map(([date, items]) => {
+    const temps = items.map(i => i.main.temp);
+    const pops = items.map(i => i.pop || 0);
+    const d = new Date(date + 'T12:00:00');
+    return {
+      date,
+      dayLabel: d.toLocaleDateString('tr-TR', { weekday: 'short' }),
+      tempMin: Math.round(Math.min(...temps)),
+      tempMax: Math.round(Math.max(...temps)),
+      desc: items[Math.floor(items.length / 2)].weather[0].description,
+      pop: Math.round(Math.max(...pops) * 100),
+    };
+  });
+}
+
+async function loadWeather(lat: number, lon: number, label: string): Promise<WeatherState> {
+  const key = `wx_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+  const cached = readCache(key);
+  if (cached) return { ...cached, city: label || cached.city };
+
+  const [cur, fc] = await Promise.all([
+    getCurrentWeather(lat, lon),
+    getForecast(lat, lon),
+  ]);
+
   const state: WeatherState = {
-    city: cityLabel,
-    temp: Math.round(cur.temp),
-    feels_like: Math.round(cur.feels_like),
-    humidity: cur.humidity,
-    wind_speed: Math.round(cur.wind_speed * 3.6),
-    wind_deg: cur.wind_deg || 0,
-    pressure: cur.pressure,
+    city: label || cur.name,
+    country: cur.sys?.country || '',
+    temp: Math.round(cur.main.temp),
+    feels_like: Math.round(cur.main.feels_like),
+    humidity: cur.main.humidity,
+    wind_speed: Math.round((cur.wind?.speed || 0) * 3.6),
+    wind_deg: cur.wind?.deg || 0,
+    pressure: cur.main.pressure,
     visibility: Math.round((cur.visibility || 10000) / 1000),
-    uvi: Math.round(cur.uvi || 0),
     weather_main: cur.weather[0].main,
     weather_desc: cur.weather[0].description,
-    daily: d.daily?.slice(0, 5) || [],
-    sunrise: cur.sunrise,
-    sunset: cur.sunset,
+    sunrise: cur.sys?.sunrise || 0,
+    sunset: cur.sys?.sunset || 0,
+    forecast: parseForecast(fc),
   };
   writeCache(key, state);
   return state;
 }
 
-/* ─── GEOCODİNG API (ücretsiz, limit yok) ───────────────────── */
-async function geocodeCity(city: string): Promise<{ lat: number; lon: number; name: string } | null> {
-  try {
-    const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data?.length) return null;
-    return { lat: data[0].lat, lon: data[0].lon, name: data[0].local_names?.tr || data[0].name };
-  } catch { return null; }
-}
-
-const fmt = (unix: number) => new Date(unix * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-const fmtDay = (unix: number) => new Date(unix * 1000).toLocaleDateString('tr-TR', { weekday: 'short' });
+const fmt = (unix: number) =>
+  unix ? new Date(unix * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
 
 /* ─── SAYFA ─────────────────────────────────────────────────── */
 export default function HavaDurumuPage() {
@@ -170,9 +178,11 @@ export default function HavaDurumuPage() {
   const load = async (lat: number, lon: number, label: string) => {
     setLoading(true); setError('');
     try {
-      const data = await fetchOneCall(lat, lon, label);
+      const data = await loadWeather(lat, lon, label);
       setWx(data);
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) {
+      setError(e.message);
+    }
     setLoading(false);
   };
 
@@ -189,17 +199,18 @@ export default function HavaDurumuPage() {
   const searchCity = async () => {
     if (!customCity.trim()) return;
     setLoading(true); setError('');
-    const geo = await geocodeCity(customCity);
-    if (!geo) { setError('Sehir bulunamadi. Farkli bir yazimla deneyin.'); setLoading(false); return; }
-    setActiveCity(geo.name);
-    load(geo.lat, geo.lon, geo.name);
+    try {
+      const geo = await geocodeCity(customCity);
+      if (!geo) throw new Error('Sehir bulunamadi. Farkli bir yazimla deneyin.');
+      setActiveCity(geo.name);
+      await load(geo.lat, geo.lon, geo.name);
+    } catch (e: any) { setError(e.message); setLoading(false); }
   };
 
   useEffect(() => { getLocation(); }, []);
 
   const fc = wx ? (FISHING[wx.weather_main] || FISHING['Clouds']) : null;
   const pr = wx ? pressureInfo(wx.pressure) : null;
-  const uv = wx ? uviInfo(wx.uvi) : null;
   const busy = loading || locating;
 
   return (
@@ -250,8 +261,12 @@ export default function HavaDurumuPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100 text-sm">
-            {error}
+          <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200 text-sm space-y-1">
+            <p className="font-semibold">Hata</p>
+            <p>{error}</p>
+            {error.includes('401') && (
+              <p className="text-xs text-red-500 mt-1">API anahtarı yeni oluşturulmuşsa etkinleşmesi 1-2 saat sürebilir.</p>
+            )}
           </div>
         )}
 
@@ -259,7 +274,7 @@ export default function HavaDurumuPage() {
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3" />
             <p className="text-gray-400 text-sm">{locating ? 'Konumunuz aliniyor...' : 'Hava durumu yukleniyor...'}</p>
-            <p className="text-gray-300 text-xs mt-1">Veriler 30 dakika onbelleğe alinir</p>
+            <p className="text-gray-300 text-xs mt-1">Sonuclar 30 dakika onbellege alinir</p>
           </div>
         )}
 
@@ -267,36 +282,37 @@ export default function HavaDurumuPage() {
           <>
             {/* ANA HAVA KARTI */}
             <div className="bg-gradient-to-br from-[#0d1b2a] to-[#163350] rounded-2xl p-6 text-white shadow-xl">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-5">
                 <div>
-                  <p className="text-blue-300 text-sm font-medium">{wx.city}</p>
+                  <p className="text-blue-300 text-sm font-medium">{wx.city}{wx.country && wx.country !== 'TR' ? `, ${wx.country}` : ''}</p>
                   <p className="text-6xl md:text-7xl font-black leading-none mt-1">{wx.temp}°C</p>
                   <p className="text-blue-200 capitalize mt-1.5">{wx.weather_desc}</p>
                   <p className="text-blue-300 text-xs mt-0.5">Hissedilen {wx.feels_like}°C</p>
                 </div>
-                <div className="text-right text-xs text-blue-300/70 space-y-1 mt-1">
-                  <p>Gün dogumu {fmt(wx.sunrise)}</p>
-                  <p>Gün batimi {fmt(wx.sunset)}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-2 pt-4 border-t border-white/10">
-                {[
-                  { val: `${wx.humidity}%`,           lbl: 'Nem' },
-                  { val: `${wx.wind_speed} km/s`,      lbl: `Rüzgar ${windDir(wx.wind_deg)}` },
-                  { val: `${wx.visibility} km`,         lbl: 'Görüş' },
-                  { val: `UV ${wx.uvi}`,               lbl: uv!.text, cls: uv!.cls },
-                ].map(i => (
-                  <div key={i.lbl} className="text-center">
-                    <p className={`text-base font-bold ${i.cls || ''}`}>{i.val}</p>
-                    <p className="text-blue-300 text-[10px] mt-0.5 leading-tight">{i.lbl}</p>
+                {wx.sunrise > 0 && (
+                  <div className="text-right text-xs text-blue-300/80 mt-1 space-y-1">
+                    <p>Gun dogumu {fmt(wx.sunrise)}</p>
+                    <p>Gun batimi {fmt(wx.sunset)}</p>
                   </div>
-                ))}
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-4 border-t border-white/10">
+                <div className="text-center">
+                  <p className="text-xl font-bold">{wx.humidity}%</p>
+                  <p className="text-blue-300 text-[10px] mt-0.5">Nem</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold">{wx.wind_speed} <span className="text-sm font-normal">km/s</span></p>
+                  <p className="text-blue-300 text-[10px] mt-0.5">Ruzgar {windDir(wx.wind_deg)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold">{wx.visibility} <span className="text-sm font-normal">km</span></p>
+                  <p className="text-blue-300 text-[10px] mt-0.5">Gorus</p>
+                </div>
               </div>
             </div>
 
-            {/* ANALİZ + TAHMİN */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
               {/* Balıkçılık Analizi */}
               <div className="space-y-3">
                 {fc && (
@@ -312,9 +328,7 @@ export default function HavaDurumuPage() {
                   </div>
                 )}
                 <div className="bg-white rounded-2xl border border-gray-200 p-4">
-                  <p className="font-semibold text-gray-800 text-sm">
-                    {wx.wind_speed} km/s — {windDir(wx.wind_deg)} yönü
-                  </p>
+                  <p className="font-semibold text-gray-800 text-sm">{wx.wind_speed} km/s — {windDir(wx.wind_deg)} yonu</p>
                   <p className="text-gray-500 text-xs mt-1">
                     {wx.wind_speed > 40 ? 'Cok guclu — avlanmayin' :
                      wx.wind_speed > 25 ? 'Guclu ruzgar — dikkatli olun' :
@@ -325,41 +339,27 @@ export default function HavaDurumuPage() {
               </div>
 
               {/* 5 Günlük Tahmin */}
-              {wx.daily.length > 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              {wx.forecast.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-5">
                   <h3 className="font-bold text-gray-900 text-sm mb-3">5 Gunluk Tahmin</h3>
-                  <div className="space-y-2">
-                    {wx.daily.map((day, i) => (
-                      <div key={day.dt} className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-gray-700 w-10">{i === 0 ? 'Bug.' : fmtDay(day.dt)}</span>
-                        <span className="text-gray-400 text-xs flex-1 mx-2 capitalize line-clamp-1">
-                          {day.weather[0].description}
-                        </span>
-                        <div className="flex items-center gap-2 text-xs">
-                          {day.pop > 0 && (
-                            <span className="text-blue-500">{Math.round(day.pop * 100)}%</span>
-                          )}
-                          <span className="text-gray-400">{Math.round(day.temp.min)}°</span>
-                          <span className="text-gray-900 font-bold">{Math.round(day.temp.max)}°</span>
+                  <div className="space-y-2.5">
+                    {wx.forecast.map((day, i) => (
+                      <div key={day.date} className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-gray-700 w-9">{i === 0 ? 'Bugun' : day.dayLabel}</span>
+                        <span className="text-gray-400 text-xs flex-1 mx-2 capitalize line-clamp-1">{day.desc}</span>
+                        <div className="flex items-center gap-2 text-xs flex-shrink-0">
+                          {day.pop > 10 && <span className="text-blue-500 font-medium">{day.pop}%</span>}
+                          <span className="text-gray-400">{day.tempMin}°</span>
+                          <span className="font-bold text-gray-900">{day.tempMax}°</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-gray-200 p-4">
-                  <h3 className="font-bold text-gray-900 text-sm mb-3">Av Rehberi</h3>
-                  <div className="space-y-2 text-xs text-gray-600">
-                    <p>Yuksek basinc (1020+ hPa): Dip baliklari aktif</p>
-                    <p>Bulutlu sabah: Levrek ve lufer en iyi</p>
-                    <p>Ruzgarsiz akşam: Cupra ve karagoz</p>
-                    <p>Yağmur sonrası: Nehirlerde sazan aktif</p>
-                  </div>
-                </div>
               )}
             </div>
 
-            {/* Hava Tiplerine Gore Rehber */}
+            {/* Rehber */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h2 className="font-dm font-bold text-gray-900 mb-3">Hava Kosullarina Gore Av Rehberi</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
